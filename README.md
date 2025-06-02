@@ -9,12 +9,18 @@ pip install -r requirements.txt
 
 # Usage
 
-`python3 jrdf.py -h`
+```bash
+python3 jrdf.py -h
+````
 
 ## Movies
 
-`python3 jrdf.py -M folders/files...`
+```bash
+python3 jrdf.py -M folders/files...
+```
 
 ## TV Shows
 
-`python3 jrdf.py -T folders/files...`
+```bash
+python3 jrdf.py -T folders/files...
+```
