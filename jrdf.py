@@ -1,11 +1,39 @@
 import sys
 from pathlib import Path
 import mimetypes
+import argparse
 from guessit import guessit
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        prog="jrdf",
+        description="Just Rename the Damn Files"
+    )
+    parser.add_argument("paths", nargs="+", help="File or directory to rename")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("-M", "--movie", action="store_true", help="Movie mode (rename largest video file only)")
+    mode.add_argument("-T", "--tv", action="store_true", help="TV mode (rename all video files)")
+    return parser.parse_args()
 
 def is_video(file: Path) -> bool:
     mime = mimetypes.guess_type(file)[0]
     return mime is not None and "video" in mime
+
+def rename_directory_if_possible(directory: Path):
+    info = guessit(directory.name)
+    title = info.get("title")
+    year = info.get("year")
+    if title and year:
+        new_name = f"{title} ({year})"
+        if directory.name == new_name:
+            return
+        new_path = directory.parent / new_name
+        if not new_path.exists():
+            try:
+                directory.rename(new_path)
+                print(f"📁 {directory.name} → {new_name}")
+            except OSError as e:
+                print(f"{directory} => {e}")
 
 def change_file(file: Path):
     info = guessit(str(file))
@@ -21,44 +49,40 @@ def change_file(file: Path):
     if not new_path.exists():
         try:
             file.rename(new_path)
+            print(f"🎞️ {file.name} → {new_name}")
         except OSError as e:
             print(f"{file} => {e}")
-
-def change_dir(directory: Path):
-    for f in directory.iterdir():
-        if f.is_file() and is_video(f):
-            change_file(f)
-
-    info = guessit(directory.name)
-    title = info.get("title")
-    year = info.get("year")
-
-    if title and year:
-        new_name = f"{title} ({year})"
-        if directory.name == new_name:
-            return
-        new_path = directory.parent / new_name
-        if not new_path.exists():
-            try:
-                directory.rename(new_path)
-            except OSError as e:
-                print(f"{directory} => {e}")
+            
+def change_dir_movie(directory: Path):
+    videos = [f for f in directory.iterdir()
+              if f.is_file() and is_video(f) and "sample" not in f.name.lower()]
+    if not videos:
+        return
+    main_video = max(videos, key=lambda f: f.stat().st_size)
+    change_file(main_video)
+    rename_directory_if_possible(directory)
+    
+def change_dir_tv(directory: Path):
+    videos = [f for f in directory.iterdir() if f.is_file() and is_video(f)]
+    for video in videos:
+        change_file(video)
 
 def main():
-    if len(sys.argv) == 1:
-        print("Usage: rename_to_jellyfin.py <file_or_dir> [...]")
-        sys.exit(1)
-    for arg in sys.argv[1:]:
-        path = Path(arg)
+    args = parse_args()
+    for path_str in args.paths:
+        path = Path(path_str).expanduser().resolve()
         if not path.exists():
             print(f"{path} not found")
             continue
-        elif path.is_dir():
-            print(f"Processing directory: {path}")
-            change_dir(path)
-        elif path.is_file():
+        if path.is_file():
             print(f"Processing file: {path}")
             change_file(path)
+        elif path.is_dir():
+            print(f"Processing directory: {path}")
+            if args.movie:
+                change_dir_movie(path)
+            elif args.tv:
+                change_dir_tv(path)
 
 if __name__ == "__main__":
     main()
