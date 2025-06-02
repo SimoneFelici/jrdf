@@ -3,7 +3,9 @@ Just rename the damn files
 
 # Install
 
-`pip install -r requirements.txt`
+```bash
+pip install -r requirements.txt
+```
 
 # Usage
 
