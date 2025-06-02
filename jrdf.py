@@ -22,7 +22,7 @@ def change_file(file: Path):
         try:
             file.rename(new_path)
         except OSError as e:
-            printf(f"{file} => {e}")
+            print(f"{file} => {e}")
 
 def change_dir(directory: Path):
     for f in directory.iterdir():
@@ -46,7 +46,7 @@ def change_dir(directory: Path):
 
 def main():
     if len(sys.argv) == 1:
-        printf("Usage: rename_to_jellyfin.py <file_or_dir> [...]")
+        print("Usage: rename_to_jellyfin.py <file_or_dir> [...]")
         sys.exit(1)
     for arg in sys.argv[1:]:
         path = Path(arg)
