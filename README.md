@@ -17,11 +17,11 @@ python3 jrdf.py -h
 ## Movies
 
 ```bash
-python3 jrdf.py -M folders/files...
+python3 jrdf.py -M folders
 ```
 
 ## TV Shows
 
 ```bash
-python3 jrdf.py -T folders/files...
+python3 jrdf.py -T folders
 ```
