@@ -1,5 +1,8 @@
 # jrdf
-Just rename the damn files
+
+- Just rename the damn files -
+
+Utility that changes the Movies/Shows filenames in the Jellyfin structure
 
 # Install
 
