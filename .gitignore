@@ -1,2 +1,5 @@
 bk
 env
+dist/
+build/
+*.egg-info/
