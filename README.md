@@ -4,6 +4,13 @@ Utility that changes the Movies/Shows filenames in the Jellyfin structure
 
 # Install
 
+Suggested
+
+```bash
+pipx install jrdf
+```
+or
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -11,17 +18,17 @@ pip install -r requirements.txt
 # Usage
 
 ```bash
-python3 jrdf.py -h
+jrdf -h
 ````
 
 ## Movies
 
 ```bash
-python3 jrdf.py -M folders
+jrdf -M folders
 ```
 
 ## TV Shows
 
 ```bash
-python3 jrdf.py -T folders
+jrdf -T folders
 ```
