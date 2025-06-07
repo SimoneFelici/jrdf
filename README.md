@@ -32,3 +32,9 @@ jrdf -M folders
 ```bash
 jrdf -T folders
 ```
+
+## Dry Run
+
+```bash
+jrdf -M/-T folders -d
+```
