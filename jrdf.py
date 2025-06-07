@@ -107,7 +107,7 @@ def change_file(file: Path):
 
     new_path = file.with_name(new_name)
     if new_path.exists():
-        print(f"⚠️  {new_path} esiste già, salto {file.name}")
+        print(f"⚠️  {new_path} already exists, skipping {file.name}")
         return
 
     try:
