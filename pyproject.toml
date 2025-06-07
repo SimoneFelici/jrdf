@@ -7,9 +7,8 @@ readme = "README.md"
 requires-python = ">=3.7"
 dependencies = ["guessit"]
 
-urls = { 
-    "Homepage" = "https://github.com/SimoneFelici/jrdf"
-}
+[project.urls]
+"Source" = "https://github.com/SimoneFelici/jrdf"
 
 [project.scripts]
 jrdf = "jrdf.__main__:main"
