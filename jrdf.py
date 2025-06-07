@@ -10,11 +10,10 @@ def is_video(file: Path) -> bool:
     return mime is not None and "video" in mime
 
 def _rename(src: Path, dst: Path, icon: str, dry_run: bool):
-    """Common rename helper that honours dry-run mode."""
     if src == dst:
         return
     if dst.exists():
-        print(f"⚠️  {dst} esiste già, salto {src}")
+        print(f"⚠️  {dst} already exists, skipping {src}")
         return
     msg = f"{icon} {src.name} → {dst.name}"
     if dry_run:
