@@ -1,6 +1,6 @@
 [project]
 name = "jrdf"
-version = "1.0"
+version = "1.1"
 description = "Just Rename the Damn Files"
 authors = [{ name = "0000FF" }]
 readme = "README.md"
