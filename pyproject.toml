@@ -1,0 +1,15 @@
+[project]
+name = "jrdf"
+version = "1.0"
+description = "Just Rename the Damn Files"
+authors = [{ name = "0000FF" }]
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = ["guessit"]
+
+[project.scripts]
+jrdf = "jrdf.__main__:main"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
