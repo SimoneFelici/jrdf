@@ -11,29 +11,58 @@ def is_video(file: Path) -> bool:
     return mime is not None and "video" in mime
 
 def organize_into_seasons(directory: Path, dry_run: bool):
-    seasons = {}
-    for video in directory.glob("*.mkv"):
-        info = guessit(str(video))
-        season = info.get("season")
-        if not season:
-            continue
-        if season in seasons:
-            seasons[season].append(video)
-        else:
-            seasons[season] = [video]
-    for season, files in seasons.items():
-        season_dir = directory / f"Season {int(season):02d}"
-        if not season_dir.exists():
+    subdirs_with_videos = []
+    for subdir in directory.iterdir():
+        # if subdir.is_dir() and any(f.suffix == ".mkv" for f in subdir.iterdir() if f.is_file()):
+        if subdir.is_dir() and any(is_video(f) for f in subdir.iterdir() if f.is_file()):
+            subdirs_with_videos.append(subdir)
+    
+    if subdirs_with_videos:
+        for subdir in subdirs_with_videos:
+            info = guessit(subdir.name)
+            season = info.get("season")
+            if season is None:
+                continue
+            new_name = f"Season {int(season):02d}"
+            new_path = directory / new_name
+            if subdir.name == new_name:
+                continue
+            if new_path.exists():
+                print(f"⚠️  {new_path} already exists, skipping {subdir.name}")
+                continue
+            msg = f"📁 {subdir.name} → {new_name}"
             if dry_run:
-                print(f"[dry-run] 📁 creare {season_dir}")
+                print(f"[dry-run] {msg}")
             else:
-                season_dir.mkdir()
-        for f in files:
-            dst = season_dir / f.name
-            if dry_run:
-                print(f"[dry-run] ⏩ sposto {f.name} in {season_dir.name}/")
+                subdir.rename(new_path)
+                print(msg)
+    else:
+        seasons = {}
+        # for video in directory.glob("*.mkv"):
+        for video in directory.iterdir():
+            if not video.is_file() or not is_video(video):
+                continue
+            info = guessit(str(video))
+            season = info.get("season")
+            if not season:
+                continue
+            if season in seasons:
+                seasons[season].append(video)
             else:
-                f.rename(dst)
+                seasons[season] = [video]
+        for season, files in seasons.items():
+            season_dir = directory / f"Season {int(season):02d}"
+            if not season_dir.exists():
+                if dry_run:
+                    print(f"[dry-run] 📁 creating {season_dir}")
+                else:
+                    season_dir.mkdir()
+            for f in files:
+                dst = season_dir / f.name
+                if dry_run:
+                    print(f"[dry-run] ⏩ moving {f.name} in {season_dir.name}/")
+                else:
+                    f.rename(dst)
 
 def change_file(file: Path, dry_run: bool):
     info = guessit(str(file))
@@ -86,7 +115,9 @@ def change_dir_movie(directory: Path, dry_run: bool):
     rename_directory_if_possible(directory, dry_run)
 
 def change_dir_tv(directory: Path, dry_run: bool):
-    for video in directory.rglob("*.mkv"):
+    # for video in directory.rglob("*.mkv"):
+    #     if video.is_file() and is_video(video):
+    for video in directory.rglob("*"):
         if video.is_file() and is_video(video):
             change_file(video, dry_run)
     organize_into_seasons(directory, dry_run)
@@ -116,22 +147,22 @@ def parse_args():
         prog="jrdf",
         description="Just Rename the Damn Files"
     )
-    parser.add_argument("paths", nargs="+", help="File o directory da rinominare")
+    parser.add_argument("paths", nargs="+", help="File or directory to rename")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("-M", "--movie", action="store_true",
-                      help="Modalità film (rigodina solo il video più grande)")
+                      help="Movie mode (renames only the largest video)")
     mode.add_argument("-T", "--tv", action="store_true",
-                      help="Modalità TV (rigodina tutti gli episodi e organizza)")
+                      help="TV mode (renames all episodes and organize)")
     parser.add_argument("-d", "--dry-run", action="store_true",
-                        help="Mostra cosa verrebbe rinominato senza cambiare nulla")
+                        help="Run without writing the changes")
     return parser.parse_args()
 
-def main():
+def jrdf() -> None:
     args = parse_args()
     for path_str in args.paths:
         path = Path(path_str).expanduser().resolve()
         if not path.exists():
-            print(f"{path} non trovato")
+            print(f"{path} not found")
             continue
         if path.is_file():
             change_file(path, args.dry_run)
@@ -140,6 +171,3 @@ def main():
                 change_dir_movie(path, args.dry_run)
             elif args.tv:
                 change_dir_tv(path, args.dry_run)
-
-if __name__ == "__main__":
-    main()

@@ -1,5 +1,10 @@
-bk
-env
-dist/
+# Python-generated files
+__pycache__/
+*.py[oc]
 build/
-*.egg-info/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
