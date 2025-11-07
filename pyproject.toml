@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "SimoneFelici", email = "felicisimone9@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.9"
 dependencies = [
     "guessit"
 ]
