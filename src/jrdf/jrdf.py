@@ -13,7 +13,6 @@ def is_video(file: Path) -> bool:
 def organize_into_seasons(directory: Path, dry_run: bool):
     subdirs_with_videos = []
     for subdir in directory.iterdir():
-        # if subdir.is_dir() and any(f.suffix == ".mkv" for f in subdir.iterdir() if f.is_file()):
         if subdir.is_dir() and any(is_video(f) for f in subdir.iterdir() if f.is_file()):
             subdirs_with_videos.append(subdir)
     
@@ -28,7 +27,23 @@ def organize_into_seasons(directory: Path, dry_run: bool):
             if subdir.name == new_name:
                 continue
             if new_path.exists():
-                print(f"⚠️  {new_path} already exists, skipping {subdir.name}")
+                for video in subdir.iterdir():
+                    if video.is_file() and is_video(video):
+                        dst = new_path / video.name
+                        if dst.exists():
+                            print(f"⚠️  {dst} already exists, skipping {video.name}")
+                            continue
+                        if dry_run:
+                            print(f"[dry-run] ⏩ moving {video.name} into {new_name}/")
+                        else:
+                            video.rename(dst)
+                if dry_run:
+                    print(f"[dry-run] 🗑️  removing empty directory {subdir.name}")
+                else:
+                    try:
+                        subdir.rmdir()
+                    except OSError:
+                        print(f"⚠️  Could not remove {subdir.name} (not empty)")
                 continue
             msg = f"📁 {subdir.name} → {new_name}"
             if dry_run:
@@ -38,7 +53,6 @@ def organize_into_seasons(directory: Path, dry_run: bool):
                 print(msg)
     else:
         seasons = {}
-        # for video in directory.glob("*.mkv"):
         for video in directory.iterdir():
             if not video.is_file() or not is_video(video):
                 continue
@@ -115,8 +129,6 @@ def change_dir_movie(directory: Path, dry_run: bool):
     rename_directory_if_possible(directory, dry_run)
 
 def change_dir_tv(directory: Path, dry_run: bool):
-    # for video in directory.rglob("*.mkv"):
-    #     if video.is_file() and is_video(video):
     for video in directory.rglob("*"):
         if video.is_file() and is_video(video):
             change_file(video, dry_run)
