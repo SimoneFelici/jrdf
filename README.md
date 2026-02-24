@@ -7,7 +7,7 @@ Utility that changes the Movies/Shows filenames in the Jellyfin structure
 Suggested
 
 ```bash
-pipx install jrdf
+uv tool install jrdf
 ```
 or
 
