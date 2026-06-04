@@ -139,7 +139,7 @@ def change_tv_file(
     planned_dsts: set[Path],
     planned_sources: set[Path],
 ):
-    parse_name = str(Path(root.name) / file.relative_to(root))
+    parse_name = str(file.relative_to(root))
     info = guessit(parse_name, {"type": "episode"})
     title = get_title(info)
 
@@ -196,7 +196,6 @@ def change_tv_file(
 
     planned_dsts.add(dst)
     planned_sources.add(file)
-
 
 def change_dir_tv(directory: Path, dry_run: bool):
     dir_info = guessit(directory.name)
