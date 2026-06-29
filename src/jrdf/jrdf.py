@@ -4,9 +4,51 @@ from pathlib import Path
 import mimetypes
 import argparse
 import logging
+import sys
 from guessit import guessit
 
 log = logging.getLogger(__name__)
+
+
+class C:
+    _enabled = sys.stdout.isatty()
+
+    DIM = "\033[2m" if _enabled else ""
+    GREEN = "\033[32m" if _enabled else ""
+    YELLOW = "\033[33m" if _enabled else ""
+    RED = "\033[31m" if _enabled else ""
+    ORANGE = "\033[38;5;208m" if _enabled else ""
+    RESET = "\033[0m" if _enabled else ""
+
+
+def _dry(tag: str) -> str:
+    return C.DIM + "[dry-run] " + C.RESET + tag
+
+
+def _tag_create() -> str:
+    return C.GREEN + "[+]" + C.RESET
+
+
+def _tag_rename() -> str:
+    return C.YELLOW + "[*]" + C.RESET
+
+
+def _tag_remove() -> str:
+    return C.RED + "[-]" + C.RESET
+
+
+def _tag_warn() -> str:
+    return C.ORANGE + "[!]" + C.RESET
+
+
+def _print_rename(src: str, dst: str, dry_run: bool) -> None:
+    tag = _dry(_tag_rename()) if dry_run else _tag_rename()
+    # indent for the arrow line: width of "[dry-run] [*] " or "[*] "
+    indent = " " * (len("[dry-run] [*] ") - 3 if dry_run else len("[*] ") - 3)
+    arrow = C.DIM + "->" + C.RESET
+    print(f"{tag} {src}")
+    print(f"{indent}{arrow} {dst}")
+
 
 def is_video(file: Path) -> bool:
     mime = mimetypes.guess_type(file)[0]
@@ -17,12 +59,11 @@ def season_hint_from_season_dir(file: Path) -> int | None:
     for parent in file.parents:
         if not parent.name.startswith("Season "):
             continue
-
         season = parent.name[7:]
         if season.isdigit():
             return int(season)
-
     return None
+
 
 def get_title(info) -> str | None:
     raw = info.get("title")
@@ -33,16 +74,14 @@ def get_title(info) -> str | None:
 
 def episode_part(episodes) -> str:
     episodes = episodes if isinstance(episodes, list) else [episodes]
-
     part = f"E{int(episodes[0]):02d}"
     if episodes[0] != episodes[-1]:
         part += f"-E{int(episodes[-1]):02d}"
-
     return part
+
 
 def cleanup_empty_source_dirs(root: Path, dry_run: bool, planned_sources: set[Path]):
     candidate_dirs: set[Path] = set()
-
     for src in planned_sources:
         parent = src.parent
         while parent != root:
@@ -66,14 +105,18 @@ def cleanup_empty_source_dirs(root: Path, dry_run: bool, planned_sources: set[Pa
                     break
 
             if empty:
-                print(f"[dry-run] [-] removing empty directory {directory.relative_to(root)}")
+                tag = _dry(_tag_remove())
+                print(f"{tag} removing empty directory {directory.relative_to(root)}")
                 removable_dirs.add(directory)
         else:
             try:
                 directory.rmdir()
-                print(f"[-] removed empty directory {directory.relative_to(root)}")
+                print(
+                    f"{_tag_remove()} removed empty directory {directory.relative_to(root)}"
+                )
             except OSError:
                 pass
+
 
 def change_file(file: Path, dry_run: bool):
     info = guessit(str(file))
@@ -86,19 +129,15 @@ def change_file(file: Path, dry_run: bool):
     if media_type == "episode":
         season = info.get("season")
         episodes = info.get("episode")
-
         if season is None or episodes is None:
             log.debug("SKIP: season=%s, episodes=%s", season, episodes)
             return
-
         if int(season) == 0:
             log.debug("SKIP: season 0")
             return
-
         if not title:
             log.debug("SKIP: no title")
             return
-
         new_name = f"{title} S{int(season):02d}{episode_part(episodes)}{file.suffix}"
 
     elif media_type == "movie":
@@ -106,7 +145,6 @@ def change_file(file: Path, dry_run: bool):
         if not title or not year:
             log.debug("SKIP: movie missing title=%r or year=%s", title, year)
             return
-
         new_name = f"{title} ({year}){file.suffix}"
 
     else:
@@ -114,21 +152,18 @@ def change_file(file: Path, dry_run: bool):
         return
 
     dst = file.with_name(new_name)
-
     if file == dst:
         log.debug("SKIP: already correct")
         return
 
     if dst.exists():
-        print(f"[!] {dst} already exists, skipping {file.name}")
+        print(f"{_tag_warn()} {dst} already exists, skipping {file.name}")
         return
 
-    msg = f"[*] {file.name} -> {dst.name}"
-    if dry_run:
-        print(f"[dry-run] {msg}")
-    else:
+    _print_rename(file.name, dst.name, dry_run)
+    if not dry_run:
         file.rename(dst)
-        print(msg)
+
 
 def change_tv_file(
     file: Path,
@@ -177,25 +212,29 @@ def change_tv_file(
         return
 
     if dst.exists() or dst in planned_dsts:
-        print(f"[!] {dst} already exists, skipping {file.name}")
+        print(f"{_tag_warn()} {dst} already exists, skipping {file.name}")
         return
 
     if not season_dir.exists() and season_dir not in planned_dirs:
         if dry_run:
-            print(f"[dry-run] [+] creating {season_dir}")
+            tag = _dry(_tag_create())
+            print(f"{tag} creating {season_dir}")
         else:
             season_dir.mkdir()
+            print(f"{_tag_create()} creating {season_dir}")
         planned_dirs.add(season_dir)
 
-    msg = f"[*] {file.relative_to(root)} -> {dst.relative_to(root)}"
-    if dry_run:
-        print(f"[dry-run] {msg}")
-    else:
+    _print_rename(
+        str(file.relative_to(root)),
+        str(dst.relative_to(root)),
+        dry_run,
+    )
+    if not dry_run:
         file.rename(dst)
-        print(msg)
 
     planned_dsts.add(dst)
     planned_sources.add(file)
+
 
 def change_dir_tv(directory: Path, dry_run: bool):
     dir_info = guessit(directory.name)
@@ -207,9 +246,7 @@ def change_dir_tv(directory: Path, dry_run: bool):
     planned_sources: set[Path] = set()
 
     videos = [
-        video
-        for video in directory.rglob("*")
-        if video.is_file() and is_video(video)
+        video for video in directory.rglob("*") if video.is_file() and is_video(video)
     ]
 
     for video in videos:
@@ -226,18 +263,19 @@ def change_dir_tv(directory: Path, dry_run: bool):
     cleanup_empty_source_dirs(directory, dry_run, planned_sources)
     rename_directory_if_possible(directory, dry_run)
 
+
 def change_dir_movie(directory: Path, dry_run: bool):
     videos = [
-        f for f in directory.iterdir()
+        f
+        for f in directory.iterdir()
         if f.is_file() and is_video(f) and "sample" not in f.name.lower()
     ]
-
     if not videos:
         return
-
     main_video = max(videos, key=lambda f: f.stat().st_size)
     change_file(main_video, dry_run)
     rename_directory_if_possible(directory, dry_run)
+
 
 def rename_directory_if_possible(directory: Path, dry_run: bool):
     info = guessit(directory.name)
@@ -246,53 +284,53 @@ def rename_directory_if_possible(directory: Path, dry_run: bool):
 
     if title and year:
         new_path = directory.parent / f"{title} ({year})"
-
         if directory == new_path:
             return
-
         if new_path.exists():
-            print(f"[!] {new_path} already exists, skipping {directory.name}")
+            print(f"{_tag_warn()} {new_path} already exists, skipping {directory.name}")
             return
 
-        msg = f"[+] {directory.name} -> {new_path.name}"
         if dry_run:
-            print(f"[dry-run] {msg}")
+            tag = _dry(_tag_create())
+            print(f"{tag} {directory.name} -> {new_path.name}")
         else:
             directory.rename(new_path)
-            print(msg)
+            print(f"{_tag_create()} {directory.name} -> {new_path.name}")
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
         prog="jrdf",
         description="Just Rename the Damn Files",
     )
-
     parser.add_argument("paths", nargs="+", help="File or directory to rename")
 
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument(
-        "-M", "--movie",
+        "-M",
+        "--movie",
         action="store_true",
         help="Movie mode (renames only the largest video)",
     )
     mode.add_argument(
-        "-T", "--tv",
+        "-T",
+        "--tv",
         action="store_true",
         help="TV mode (renames all episodes and organize)",
     )
 
     parser.add_argument(
-        "-d", "--dry-run",
-        action="store_true",
-        help="Run without writing the changes",
+        "-d", "--dry-run", action="store_true", help="Run without writing the changes"
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Show debug info from guessit parsing",
     )
 
     return parser.parse_args()
+
 
 def jrdf() -> None:
     args = parse_args()
