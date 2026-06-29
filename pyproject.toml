@@ -1,6 +1,6 @@
 [project]
 name = "jrdf"
-version = "1.0.2"
+version = "1.0.3"
 description = "Just Rename the Damn Files"
 readme = "README.md"
 authors = [
